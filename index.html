@@ -41,13 +41,33 @@
 
       const [animals, setAnimals] = useState([])
       const [show, setShow] = useState(false)
+      const [isLoading, setIsLoading] = useState(false)
       const [input, setInput] = useState('')
 
-      const addAnimal = () => {
+      const addAnimal = async () => {
         if (!input) return;
-        setAnimals(curr => [...curr, input])
-        setShow(false)
-        setInput('')
+        setIsLoading(true)
+
+        try {
+          const response = await fetch(`http://localhost:3333/animals?search=${input}`)
+          const [animalData] = await response.json()
+          if (!animalData) {
+            throw new Error('Animale non trovato')
+          }
+          const animal = {
+            name: animalData.name || 'Nome non trovato',
+            description: animalData.description || 'Descrizione non trovata',
+            image: animalData.image || null
+          }
+          setAnimals(curr => [...curr, animal])
+          return animal
+        } catch (error) {
+          console.error(error)
+        } finally {
+          setShow(false)
+          setInput('')
+          setIsLoading(false)
+        }
       }
 
       return (
@@ -55,20 +75,31 @@
           <button onClick={() => setShow(true)}>Aggiungi animale casuale</button>
           <details>
             <summary>Animali:</summary>
-            <ul>
+            <div>
               {animals.map((animal, i) => (
-                <li key={i}>{animal}</li>
+                <div key={i} className='card'>
+                  <div>
+                    <h2>{animal.name}</h2>
+                    <p>{animal.description}</p>
+                  </div>
+                  {animal.image &&
+                    <figure><img src={animal.image} alt={animal.name} /></figure>
+                  }
+                </div>
               ))}
-            </ul>
+            </div>
           </details>
           <Modal
             title='Inserisci animale'
             content={
-              <input
-                type='text'
-                value={input}
-                onChange={e => setInput(e.target.value)}
-              />
+              <>
+                <input
+                  type='text'
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                />
+                {isLoading && <p>Caricando il risultato...</p>}
+              </>
             }
             show={show}
             onClose={() => setShow(false)}
